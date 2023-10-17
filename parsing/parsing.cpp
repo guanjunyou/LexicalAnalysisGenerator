@@ -182,6 +182,16 @@ NFA closure(NFA nfa) {
     return { newStart, newEnd };
 }
 
+// 执行NFA图的正闭包操作
+NFA closurePostive(NFA nfa) {
+
+    // 产生正闭包
+    nfa.end->transitions.push_back(make_pair('#', nfa.start));
+    G[nfa.end->id].push_back(nfa.start);
+
+    return nfa;
+}
+
 // NFA 图的可选操作
 NFA select(NFA nfa) {
     State* newStart = createState(stateCounter++);
@@ -249,6 +259,11 @@ NFA regexToNFA(string regex) {
                     nfaStack.pop();
                     nfaStack.push(closure(nfa1));
                 }
+                else if (op == '+') {
+                    NFA nfa1 = nfaStack.top();
+                    nfaStack.pop();
+                    nfaStack.push(closurePostive(nfa1));
+                }
                 else if (op == '?') {
                     NFA nfa1 = nfaStack.top();
                     nfaStack.pop();
@@ -262,6 +277,12 @@ NFA regexToNFA(string regex) {
             NFA nfa1 = nfaStack.top();
             nfaStack.pop();
             nfaStack.push(closure(nfa1));
+        }
+        else if (c == '+') {
+            //cout << "正闭包" << endl;
+            NFA nfa1 = nfaStack.top();
+            nfaStack.pop();
+            nfaStack.push(closurePostive(nfa1));
         }
         else if (c == '?' ){
             NFA nfa1 = nfaStack.top();
@@ -547,6 +568,9 @@ void SimplifyDFA() {
     set<DFANode*> NotACSet;
     set<DFANode*> ACSet;
 
+    SimplifyDFANode* newStart = NULL;
+    SimplifyDFANode* newEnd = NULL;
+    SimplifyDFACounter = 0;
     for (int i = 0; i < dfaNodes.size(); i++) {
         if (dfaNodes[i]->isAccepting) {
             ACSet.insert(dfaNodes[i]);
@@ -555,13 +579,21 @@ void SimplifyDFA() {
             NotACSet.insert(dfaNodes[i]);
         }
     }
-    SimplifyDFANode* newStart = new SimplifyDFANode(SimplifyDFACounter++);
-    SimplifyDFANode* newEnd = new SimplifyDFANode(SimplifyDFACounter++,true);
-    newStart->dfaNodes = NotACSet;
-    newEnd->dfaNodes = ACSet;
+    if(!NotACSet.empty())
+        newStart = new SimplifyDFANode(SimplifyDFACounter++);
+    if(!ACSet.empty())
+        newEnd = new SimplifyDFANode(SimplifyDFACounter++, true);
+    cout << SimplifyDFACounter << endl;
 
-    SDFAQue.push(newStart);
-    SDFAQue.push(newEnd);
+    if (newStart != NULL)
+        newStart->dfaNodes = NotACSet;
+    if (newEnd != NULL)
+        newEnd->dfaNodes = ACSet;
+
+    if (newStart != NULL)
+        SDFAQue.push(newStart);
+    if (newEnd != NULL)
+        SDFAQue.push(newEnd);
 
     for (auto op : operatorChar) {
 
@@ -911,6 +943,36 @@ void generateCode() {
         << "while (true) {\n"
         << "char ch = getchar();\n\n"
         << "switch (state) {\n";
+    string tmp[1000];
+    int startIndex = 0;
+    for(int i=0;i<SimplifyDFACounter;i++) {
+        if(sdfaTable[i][0] == "-") {
+            startIndex = i;
+            for(int j=0;j<operatorChar.size() + 2;j++) {
+                tmp[j] = sdfaTable[i][j];
+            }
+        }
+    }
+    for(int i=startIndex-1;i>=0;i--) {
+        for(int j=0;j<operatorChar.size() + 2;j++) {
+            sdfaTable[i+1][j] = sdfaTable[i][j];
+        }
+    }
+    for(int i=0;i<operatorChar.size() + 2;i++) {
+        sdfaTable[0][i] = tmp[i];
+    }
+
+    cout << "     ";
+    for (auto op : operatorChar) {
+        cout << op << " ";
+    }
+    cout << endl;
+    for (int i = 0; i < SimplifyDFACounter; i++) {
+        for (int j = 0; j < operatorChar.size() + 2; j++) {
+            cout << sdfaTable[i][j] << " ";
+        }
+        cout << endl;
+    }
 
     for (int i = 0; i < SimplifyDFACounter; ++i) {
         int col = 2; int time = 0;
@@ -924,26 +986,35 @@ void generateCode() {
                         outputFile << "if (ch == '" << op << "') {\n"
                             << "state = " << k << ";\n"
                             << "}\n";
+
+                        time++;
                     }
                     else {
                         outputFile << "else if (ch == '" << op << "') {\n"
                             << "state = " << k << ";\n"
                             << "}\n";
+                        time++;
                     }
                 }
             }
             col++;
-            time++;
         }
-        if (sdfaTable[i][0] == "+") {
+        if (sdfaTable[i][0] == "+" &&time != 0) {
             outputFile << "else if (ch == '\\n'){"
-                << "cout << \"Done\" << endl;\n"
+                << "cout << \"corrent expression!!!\" << endl;\n"
+                << "return 0;\n"
+                << "}\n";
+
+        }
+        if (sdfaTable[i][0] == "+" &&time == 0) {
+            outputFile << "if (ch == '\\n'){"
+                << "cout << \"corrent expression!!!\" << endl;\n"
                 << "return 0;\n"
                 << "}\n";
 
         }
         outputFile << "else {\n"
-            << "cout << \"error(\" << state << \")\" << endl;\n"
+            << "cout << \"wrong expression!!!wrong state(\" << state << \")\" << endl;\n"
             << "return 0;\n"
             << "}\n"
             << "break;\n";
@@ -951,15 +1022,14 @@ void generateCode() {
 
     }
     outputFile << "default:\n"
-        << "cout << \"error(\" << state << \")\" << endl;\n"
+        << "cout << \"wrong expression!!!wrong state(\" << state << \")\" << endl;\n"
         << "return 0;\n"
         << "}\n"
         << "}\n\n"
-        << "cout << \"error(\" << state << \")\" << endl;\n"
+        << "cout << \"wrong expression!!!wrong state(\" << state << \")\" << endl;\n"
         << "return 0;\n"
         << "}\n";
 }
-
 
 void calculateDegree() {
     for (int i = 1; i <= stateCounter; i++) {
@@ -993,17 +1063,20 @@ void Parsing::on_pushButton_clicked()//开始分析
     for(int i=0;i<1000;i++) {
         outDegree[i] = 0;
         inDegree[i] = 0;
+        vis[i] = 0;
     }
+
     NFAMap.clear();
     SDFAMap.clear();
+
     while(!SDFAQue.empty()) {
         SDFAQue.pop();
     }
     for(int i=0;i<1000;i++) {
         for(int j=0;j<1000;j++) {
             nfaTable[i][j] = "";
-            nfaTable[i][j] = "";
-            nfaTable[i][j] = "";
+            dfaTable[i][j] = "";
+            sdfaTable[i][j] = "";
         }
     }
 
@@ -1020,6 +1093,7 @@ void Parsing::on_pushButton_clicked()//开始分析
     // 设置优先级
     priorityMap.insert(make_pair('?', 3));
     priorityMap.insert(make_pair('*',3));
+    priorityMap.insert(make_pair('+',3));
     priorityMap.insert(make_pair('.', 2));
     priorityMap.insert(make_pair('|', 1));
 
@@ -1029,7 +1103,8 @@ void Parsing::on_pushButton_clicked()//开始分析
 
     for (int i = 0; i < regex.size() - 1; i++) {
         if (isWordChar(regex[i]) && isWordChar(regex[i + 1]) || isWordChar(regex[i]) && regex[i+1] == '('
-            || regex[i] == ')' && isWordChar(regex[i + 1]) || regex[i] == '*' && regex[i + 1] != ')' && regex[i+1]!='|' && regex[i+1]!='?' || regex[i] == '?' && regex[i+1] != ')')
+            || regex[i] == ')' && isWordChar(regex[i + 1]) || regex[i] == '*' && regex[i + 1] != ')' && regex[i+1]!='|' && regex[i+1]!='?' || regex[i] == '?' && regex[i+1] != ')'
+                || regex[i] == '+' && regex[i + 1] != ')')
         {
             string str1 = regex.substr(0, i + 1);
             string str2 = regex.substr(i + 1, (regex.size() - i));
@@ -1050,8 +1125,8 @@ void Parsing::on_pushButton_clicked()//开始分析
     DisplayDFA();
     cout << " ------------- 开始输出化简后的 DFA 表--------------" << endl;
     DisplaySimplifyDFA();
-    ShowCode();
-    //generateCode();
+    //ShowCode();
+    generateCode();
 }
 
 void Parsing::on_pushButton_2_clicked()//NFA

@@ -17,7 +17,7 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>60</x>
+      <x>10</x>
       <y>10</y>
       <width>511</width>
       <height>61</height>
@@ -179,7 +179,7 @@
      <item>
       <widget class="QPushButton" name="pushButton_5">
        <property name="text">
-        <string>生成c++代码</string>
+        <string>生成c++词法分析代码</string>
        </property>
       </widget>
      </item>
