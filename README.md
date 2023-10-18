@@ -1,8 +1,8 @@
-### 编译原理实验: 根据正则表达式生成词法分析程序
+### 编译原理实验: XLEX-词法自动生成器
+
+作者：华南师范大学 关竣佑
 
 欢迎  star 
-
-By 关竣佑
 
 编译环境 Qt 4.3.0        需要放在英文路径下
 **实现将正则表达式-->NFA--->DFA-->DFA最小化-->词法分析程序**
@@ -21,10 +21,10 @@ By 关竣佑
 
 界面示意
 
-![image-20231018215913538](README.assets/image-20231018215913538.png)
+![image-20231018221529942](README.assets/image-20231018221529942.png)
 
-![image-20231018215921452](README.assets/image-20231018215921452.png)
+![image-20231018221542309](README.assets/image-20231018221542309.png)
 
-![image-20231018215928599](README.assets/image-20231018215928599.png)
+![image-20231018221608909](README.assets/image-20231018221608909.png)
 
-![image-20231018215937265](README.assets/image-20231018215937265.png)
+![image-20231018221627053](README.assets/image-20231018221627053.png)
