@@ -19,6 +19,11 @@
 #include<QString>
 #include<QFile>
 #include <QTextStream>
+#include <fstream>
+#include <QFileDialog>
+#include <QMessageBox>
+
+
 using namespace std;
 
 
@@ -437,55 +442,11 @@ void NFAtoDFA() {
     //    cout << endl;
     //}
 
-    //for (int i = 0; i < dfaNodes.size(); i++) {
-    //    DFANode* dfaNode = dfaNodes[i];
-    //    map<char, DFANode*> opDfaMap;
-    //    for (auto nfa : dfaNode->nfaNodes) { // 遍历每一个结点
-    //
-    //        if (outDegree[nfa] > 0) // 不是边缘
-    //            continue;
-    //        vector<pair<char, DFANode*>> nextNode = findNextDFANode(NFAMap[nfa]);
-    //        if (nextNode.empty()) {
-    //            continue;
-    //        }
-    //        if (NFAMap[nfa]->transitions.size() == 0) // 后面一条边也没有
-    //            continue;
-    //        for (int j = 0; j < nextNode.size(); j++) {
-    //            if (opDfaMap.find(nextNode[j].first) != opDfaMap.end()) {
-    //                UnionDFA(opDfaMap[nextNode[j].first], nextNode[j].second); // 把 后面合并到前面
-    //                i--;
-    //
-    //            }
-    //            opDfaMap.insert(make_pair(nextNode[j].first, nextNode[j].second));
-    //        }
-    //    }
-    //}
-
-    //DFANodeCounter = dfaNodes.size();
-    //for (int i = 0; i < dfaNodes.size(); i++) {
-    //    //cout << i << " : " << dfaNodes[i]->id << endl;
-    //    if (i != dfaNodes[i]->id) {
-    //        int oldId = dfaNodes[i]->id;
-    //        int newId = i;
-    //        dfaNodes[i]->id = newId;
-    //        for (int j = 0; j < dfaNodes.size(); j++) {
-    //            if (dfaNodes[j]->nfaNodes.find(oldId) != dfaNodes[j]->nfaNodes.end()) {
-    //                dfaNodes[j]->nfaNodes.erase(oldId);
-    //                dfaNodes[j]->nfaNodes.insert(newId);
-    //            }
-    //        }
-    //    }
-    //}
-    //for (int i = 0; i < dfaNodes.size(); i++) {
-    //   cout << i << " : " << dfaNodes[i]->id << endl;
-    //}
-
-    for (int i = 0; i < DFANodeCounter; i++) {
+    for (int i = 0; i < dfaNodes.size(); i++) {
         DFANode* dfaNode = dfaNodes[i];
-        if (i == 1) {
-            i = 1;
-        }
+        map<char, DFANode*> opDfaMap;
         for (auto nfa : dfaNode->nfaNodes) { // 遍历每一个结点
+
             if (outDegree[nfa] > 0) // 不是边缘
                 continue;
             vector<pair<char, DFANode*>> nextNode = findNextDFANode(NFAMap[nfa]);
@@ -495,9 +456,70 @@ void NFAtoDFA() {
             if (NFAMap[nfa]->transitions.size() == 0) // 后面一条边也没有
                 continue;
             for (int j = 0; j < nextNode.size(); j++) {
-                dfaNode->transitions.push_back(make_pair(nextNode[j].first, nextNode[j].second));
-                DFAG[dfaNode->id].push_back(nextNode[j].second);
+                if (opDfaMap.find(nextNode[j].first) != opDfaMap.end()) {
+                    UnionDFA(opDfaMap[nextNode[j].first], nextNode[j].second); // 把 后面合并到前面
+                    i--;
+
+                }
+                opDfaMap.insert(make_pair(nextNode[j].first, nextNode[j].second));
             }
+        }
+    }
+
+    DFANodeCounter = dfaNodes.size();
+    for (int i = 0; i < dfaNodes.size(); i++) {
+        //cout << i << " : " << dfaNodes[i]->id << endl;
+        if (i != dfaNodes[i]->id) {
+            int oldId = dfaNodes[i]->id;
+            int newId = i;
+            dfaNodes[i]->id = newId;
+        }
+    }
+    for (int i = 0; i < dfaNodes.size(); i++) {
+       cout << i << " : " << dfaNodes[i]->id << endl;
+    }
+
+
+    // 连接 DFA 点
+
+
+    for (int i = 0; i < DFANodeCounter; i++) {
+        DFANode* dfaNode = dfaNodes[i];
+        vector<pair<char, DFANode*>> nextNode;
+        map<char,set<int>> nextNFAs;
+        for(auto op : operatorChar) {
+            set<int> tmp;
+            nextNFAs.insert(make_pair(op,tmp));
+        }
+
+        for (auto nfa : dfaNode->nfaNodes) { // 遍历每一个结点
+            if (outDegree[nfa] > 0) // 不是边缘
+                continue;
+            if(NFAMap[nfa]->transitions.size() == 0)
+                continue;
+
+            char op = NFAMap[nfa]->transitions[0].first;
+            set<int> nfaSet = nextNFAs[op];
+            dfsFindDFA(NFAMap[nfa]->transitions[0].second,&nfaSet);
+
+            nextNFAs[op] = nfaSet;
+
+        }
+
+        for(auto op : operatorChar) {
+            set<int> nfaSet = nextNFAs[op];
+            if(nfaSet.empty())
+                continue;
+            for(auto dfa : dfaNodes) {
+                if(dfa->nfaNodes == nfaSet) {
+                    nextNode.push_back(make_pair(op,dfa));
+                }
+            }
+        }
+        for (int j = 0; j < nextNode.size(); j++) {
+
+            dfaNode->transitions.push_back(make_pair(nextNode[j].first, nextNode[j].second));
+            DFAG[dfaNode->id].push_back(nextNode[j].second);
         }
     }
 
@@ -1099,7 +1121,14 @@ void Parsing::on_pushButton_clicked()//开始分析
 
     string regex;
     // cout << "输入正则表达式: ";
-    regex = ui->lineEdit->text().toStdString();
+    //regex = ui->lineEdit->text().toStdString();
+    QString text = ui->textEdit->toPlainText();
+    regex = text.toStdString();
+
+    for(int i=0;i<regex.size();i++) {
+        if(regex[i] == '\n' && i != regex.size() - 1)
+            regex[i] = '|';
+    }
 
     for (int i = 0; i < regex.size() - 1; i++) {
         if (isWordChar(regex[i]) && isWordChar(regex[i + 1]) || isWordChar(regex[i]) && regex[i+1] == '('
@@ -1225,4 +1254,54 @@ void Parsing::on_pushButton_5_clicked()
     ui->textBrowser->setText(in.readAll());
 
     file.close();
+}
+
+void Parsing::on_pushButton_6_clicked()
+{
+    QString text = ui->textEdit->toPlainText();
+    string regex = text.toStdString();
+    // 打开一个文件流
+    ofstream outputFile("regex.txt");
+
+    // 检查文件是否成功打开
+    if (outputFile.is_open()) {
+        // 写入字符串到文件
+        outputFile << regex;
+
+        // 关闭文件流
+        outputFile.close();
+    }
+}
+
+void Parsing::on_pushButton_7_clicked()
+{
+    // 打开文件选择对话框以获取用户选择的文件
+    QString filePath = QFileDialog::getOpenFileName(this, "选择文件", QDir::homePath(), "文本文件 (*.txt);;所有文件 (*.*)");
+
+    // 检查用户是否取消了文件选择
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // 打开选择的文件
+    QFile file(filePath);
+
+    // 检查文件是否成功打开
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::critical(this, "错误", "无法打开文件");
+        return;
+    }
+
+    // 创建文本流来读取文件内容
+    QTextStream in(&file);
+
+    // 读取文件中的文本到一个QString
+    QString fileContents = in.readAll();
+
+    // 关闭文件
+    file.close();
+
+    // 在这里，fileContents 包含了文件的文本内容，你可以对它进行操作，例如显示在UI上或者进行其他处理
+    // 例如，将文本内容显示在一个文本编辑框中：
+    ui->textEdit->setPlainText(fileContents);
 }

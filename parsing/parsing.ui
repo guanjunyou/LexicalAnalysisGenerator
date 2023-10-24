@@ -40,8 +40,8 @@
    <widget class="QTextBrowser" name="textBrowser">
     <property name="geometry">
      <rect>
-      <x>450</x>
-      <y>80</y>
+      <x>440</x>
+      <y>70</y>
       <width>731</width>
       <height>621</height>
      </rect>
@@ -73,29 +73,13 @@
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt;&quot;&gt;请输入正则表达式：&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>140</y>
-      <width>401</width>
-      <height>71</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Arial Narrow</family>
-      <pointsize>16</pointsize>
-     </font>
-    </property>
-   </widget>
    <widget class="QPushButton" name="pushButton">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>230</y>
+      <y>300</y>
       <width>401</width>
-      <height>71</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="text">
@@ -106,9 +90,9 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>310</y>
+      <y>370</y>
       <width>401</width>
-      <height>81</height>
+      <height>61</height>
      </rect>
     </property>
     <property name="text">
@@ -119,9 +103,9 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>400</y>
+      <y>440</y>
       <width>401</width>
-      <height>71</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="text">
@@ -132,9 +116,9 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>480</y>
+      <y>510</y>
       <width>401</width>
-      <height>71</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="text">
@@ -145,13 +129,54 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>560</y>
+      <y>570</y>
       <width>401</width>
-      <height>81</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="text">
      <string>生成c++词法分析代码</string>
+    </property>
+   </widget>
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>140</y>
+      <width>401</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>16</pointsize>
+     </font>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_6">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>630</y>
+      <width>401</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>保存正则表达式</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_7">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>230</y>
+      <width>401</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>从文件载入正则表达式</string>
     </property>
    </widget>
   </widget>
