@@ -1,6 +1,7 @@
 /**
   作者：华南师范大学 关竣佑
   2023.10.14
+  版权所有 翻版必究
   */
 
 #include "parsing.h"
@@ -190,11 +191,22 @@ NFA closure(NFA nfa) {
 // 执行NFA图的正闭包操作
 NFA closurePostive(NFA nfa) {
 
+    State* newStart = createState(stateCounter++);
+    newStart->isStarting = true;
+    State* newEnd = createState(stateCounter++,true);
+    newStart->transitions.push_back(make_pair('#', nfa.start));
+    G[newStart->id].push_back(nfa.start);
+    nfa.end->transitions.push_back(make_pair('#', newEnd));
+    G[nfa.end->id].push_back(newEnd);
+
     // 产生正闭包
     nfa.end->transitions.push_back(make_pair('#', nfa.start));
     G[nfa.end->id].push_back(nfa.start);
 
-    return nfa;
+    nfa.end->isAccepting = false;
+    nfa.start->isStarting = false;
+
+    return { newStart, newEnd };
 }
 
 // NFA 图的可选操作
@@ -295,7 +307,7 @@ NFA regexToNFA(string regex) {
             nfaStack.push(select(nfa1));
         }
         else if ((c == '|' || c == '.' || c == '?') && !operatorStack.empty() && priorityMap[c] <= priorityMap[operatorStack.top()]) {
-            while (!operatorStack.empty() && priorityMap[c] <= priorityMap[operatorStack.top()]) {
+            while (!operatorStack.empty() && priorityMap[c] <= priorityMap[operatorStack.top()] && operatorStack.top() != '(') {
                 char op = operatorStack.top();
                 operatorStack.pop();
                 if (op == '|') {
@@ -422,6 +434,7 @@ void UnionDFA(DFANode* dfa1, DFANode* dfa2) {
 
     dfaNodes.erase(remove(dfaNodes.begin(), dfaNodes.end(), dfa2), dfaNodes.end());
 
+
 }
 
 void NFAtoDFA() {
@@ -442,6 +455,9 @@ void NFAtoDFA() {
     //    cout << endl;
     //}
 
+    //合并相同字母边指向的 DFA点
+    vector<pair<DFANode*,DFANode*>> unionPair;
+
     for (int i = 0; i < dfaNodes.size(); i++) {
         DFANode* dfaNode = dfaNodes[i];
         map<char, DFANode*> opDfaMap;
@@ -457,13 +473,19 @@ void NFAtoDFA() {
                 continue;
             for (int j = 0; j < nextNode.size(); j++) {
                 if (opDfaMap.find(nextNode[j].first) != opDfaMap.end()) {
-                    UnionDFA(opDfaMap[nextNode[j].first], nextNode[j].second); // 把 后面合并到前面
-                    i--;
-
+                    //UnionDFA(opDfaMap[nextNode[j].first], nextNode[j].second); // 把 后面合并到前面
+                    //i--;
+                    DFANode* oldDfa = opDfaMap[nextNode[j].first];
+                    unionPair.push_back(make_pair(oldDfa,nextNode[j].second));
                 }
+
                 opDfaMap.insert(make_pair(nextNode[j].first, nextNode[j].second));
             }
         }
+    }
+
+    for(int i=0;i<unionPair.size();i++) {
+        UnionDFA(unionPair[i].first,unionPair[i].second);
     }
 
     DFANodeCounter = dfaNodes.size();
@@ -757,7 +779,7 @@ void DisplayDFA() {
         if (dfa->isAccepting)
             dfaTable[i][0] = '+';
         if (dfa->isStarting)
-            dfaTable[i][0] = '-';
+            dfaTable[i][0] += '-';
        int col = 2;
         for (auto op : operatorChar) {
             for (int j = 0; j < dfa->transitions.size(); j++) {
@@ -805,7 +827,7 @@ void DisplaySimplifyDFA() {
         if (sdfaNode->isAccepting)
             sdfaTable[num][0] = '+';
         if (sdfaNode->isStarting)
-            sdfaTable[num][0] = '-';
+            sdfaTable[num][0] += '-';
 
         int col = 2;
         for (auto op : operatorChar) {
@@ -968,7 +990,7 @@ void generateCode() {
     string tmp[1000];
     int startIndex = 0;
     for(int i=0;i<SimplifyDFACounter;i++) {
-        if(sdfaTable[i][0] == "-") {
+        if(sdfaTable[i][0] == "-" || sdfaTable[i][0] == "+-") {
             startIndex = i;
             for(int j=0;j<operatorChar.size() + 2;j++) {
                 tmp[j] = sdfaTable[i][j];
@@ -1129,11 +1151,12 @@ void Parsing::on_pushButton_clicked()//开始分析
         if(regex[i] == '\n' && i != regex.size() - 1)
             regex[i] = '|';
     }
+    cout<<regex<<endl;
 
     for (int i = 0; i < regex.size() - 1; i++) {
         if (isWordChar(regex[i]) && isWordChar(regex[i + 1]) || isWordChar(regex[i]) && regex[i+1] == '('
             || regex[i] == ')' && isWordChar(regex[i + 1]) || regex[i] == '*' && regex[i + 1] != ')' && regex[i+1]!='|' && regex[i+1]!='?' || regex[i] == '?' && regex[i+1] != ')'
-                || regex[i] == '+' && regex[i + 1] != ')')
+                || regex[i] == '+' && regex[i + 1] != ')' && regex[i+1]!='|' && regex[i+1]!='?' || regex[i] == ')' && regex[i + 1] == '(')
         {
             string str1 = regex.substr(0, i + 1);
             string str2 = regex.substr(i + 1, (regex.size() - i));
@@ -1141,6 +1164,7 @@ void Parsing::on_pushButton_clicked()//开始分析
             regex = str1 + str2;
         }
     }
+    cout<<regex<<endl;
 
     NFA nfa = regexToNFA(regex);
     calculateDegree();
@@ -1256,22 +1280,49 @@ void Parsing::on_pushButton_5_clicked()
     file.close();
 }
 
+//void Parsing::on_pushButton_6_clicked()
+//{
+//    QString text = ui->textEdit->toPlainText();
+//    string regex = text.toStdString();
+//    // 打开一个文件流
+//    ofstream outputFile("regex.txt");
+
+//    // 检查文件是否成功打开
+//    if (outputFile.is_open()) {
+//        // 写入字符串到文件
+//        outputFile << regex;
+
+//        // 关闭文件流
+//        outputFile.close();
+//    }
+//}
 void Parsing::on_pushButton_6_clicked()
 {
     QString text = ui->textEdit->toPlainText();
     string regex = text.toStdString();
-    // 打开一个文件流
-    ofstream outputFile("regex.txt");
 
-    // 检查文件是否成功打开
-    if (outputFile.is_open()) {
-        // 写入字符串到文件
-        outputFile << regex;
+    // 使用文件对话框获取用户选择的保存目录
+    QString saveDirectory = QFileDialog::getExistingDirectory(this, "选择保存目录", QDir::homePath());
 
-        // 关闭文件流
-        outputFile.close();
+    // 检查用户是否选择了目录
+    if (!saveDirectory.isEmpty()) {
+        // 构造要保存的文件路径
+        QString filePath = saveDirectory + "/regex.txt";
+
+        // 打开一个文件流
+        ofstream outputFile(filePath.toStdString());
+
+        // 检查文件是否成功打开
+        if (outputFile.is_open()) {
+            // 写入字符串到文件
+            outputFile << regex;
+
+            // 关闭文件流
+            outputFile.close();
+        }
     }
 }
+
 
 void Parsing::on_pushButton_7_clicked()
 {
